@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import bg1 from '../assets/bg1.png';
 import Player from './Player.js';
 import Obstacle from './Obstacle.js';
@@ -20,6 +20,8 @@ const Bg = () => {
   const gameAreaWidth = 380;
   const birdLeft = 15;
   const jumpHeight = 40;
+
+  const gameRef = useRef(null);
 
   useEffect(() => {
     let gameInterval;
@@ -127,7 +129,7 @@ const Bg = () => {
   };
 
   return (
-    <div className='h-screen w-screen flex justify-center items-center fixed' onClick={() => setGameHasStarted(true)}>
+    <div ref={gameRef} className='h-screen w-screen flex justify-center items-center fixed' onClick={() => setGameHasStarted(true)}>
       <div className='absolute w-screen h-screen bg-zinc-800'>
         <img src={bg1} alt='bg' className='relative w-screen h-screen bg-no-repeat object-cover opacity-30 select-none'></img>
       </div>
@@ -138,7 +140,7 @@ const Bg = () => {
             <Player position={birdPosition} />
             {obstacles.map((obstacle, index) => (
               <React.Fragment key={index}>
-                {obstacle.left > 0 && obstacle.left < gameAreaWidth && (
+                {obstacle.left > -obstacleWidth && (
                   <>
                     <Obstacle top={0} left={obstacle.left} height={obstacle.topHeight} />
                     <Obstacle top={gameAreaHeight - obstacle.bottomHeight} left={obstacle.left} height={obstacle.bottomHeight} />
@@ -146,9 +148,9 @@ const Bg = () => {
                 )}
               </React.Fragment>
             ))}
-            {isGameOver && <GameOver score={score} restartGame={restartGame} />}
+            {isGameOver && <GameOver score={score} restartGame={restartGame} gameRef={gameRef} />}
             {gameHasStarted && !isGameOver && <div className="absolute top-4 left-4 text-white text-2xl">Score: {score}</div>}
-            {!gameHasStarted && <div className="absolute w-full h-full flex justify-center items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl backdrop-filter backdrop-blur-sm duration-1000">Press Space to Start</div>}
+            {!gameHasStarted && <div className="absolute w-full h-full flex justify-center items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl backdrop-filter backdrop-blur-sm duration-1000">Press Any Key to Start</div>}
           </div>
         </div>
       </div>
