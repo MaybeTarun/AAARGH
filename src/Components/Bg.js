@@ -47,7 +47,7 @@ const Bg = () => {
 
           return newObstacles;
         });
-      }, 35);
+      }, 40);
     }
 
     return () => clearInterval(gameInterval);
