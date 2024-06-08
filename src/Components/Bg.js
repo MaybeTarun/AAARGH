@@ -3,6 +3,7 @@ import bg1 from '../assets/bg1.png';
 import Player from './Player.js';
 import Obstacle from './Obstacle.js';
 import GameOver from './GameOver.js';
+import Cookies from 'js-cookie';
 
 const Bg = () => {
   const [birdPosition, setBirdPosition] = useState(250);
@@ -10,6 +11,7 @@ const Bg = () => {
   const [obstacles, setObstacles] = useState([]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(Cookies.get('highScore') || 0);
   const gravity = 6;
   const birdWidth = 50;
   const birdHeight = 50;
@@ -20,6 +22,8 @@ const Bg = () => {
   const gameAreaWidth = 380;
   const birdLeft = 15;
   const jumpHeight = 40;
+  const middleRangeStart = 150;
+  const middleRangeEnd = 450;
 
   const gameRef = useRef(null);
 
@@ -37,7 +41,7 @@ const Bg = () => {
           newObstacles = newObstacles.filter(obstacle => obstacle.left > -obstacleWidth);
 
           if (newObstacles.length === 0 || newObstacles[newObstacles.length - 1].left < gameAreaWidth - obstacleGap) {
-            const topHeight = Math.random() * (gameAreaHeight - gapSize - birdHeight);
+            const topHeight = Math.random() * (middleRangeEnd - middleRangeStart - gapSize) + middleRangeStart;
             const bottomHeight = gameAreaHeight - topHeight - gapSize;
             newObstacles.push({
               topHeight,
@@ -55,24 +59,30 @@ const Bg = () => {
     return () => clearInterval(gameInterval);
   }, [gameHasStarted, isGameOver]);
 
+  const handleJump = () => {
+    if (!gameHasStarted) {
+      setGameHasStarted(true);
+    }
+    if (gameHasStarted && !isGameOver) {
+      setBirdPosition(birdPosition => birdPosition - jumpHeight);
+    }
+    if (isGameOver) {
+      restartGame();
+    }
+  };
+
   useEffect(() => {
-    const handleJump = () => {
-      if (!gameHasStarted) {
-        setGameHasStarted(true);
-      }
-      if (gameHasStarted && !isGameOver) {
-        setBirdPosition(birdPosition => birdPosition - jumpHeight);
-      }
-      if (isGameOver) {
-        restartGame();
+    const handleKeyDown = (event) => {
+      if (event.key === ' ') {
+        handleJump();
       }
     };
 
-    window.addEventListener('keydown', handleJump);
+    window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('touchstart', handleJump);
 
     return () => {
-      window.removeEventListener('keydown', handleJump);
+      window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('touchstart', handleJump);
     };
   }, [gameHasStarted, isGameOver]);
@@ -85,6 +95,7 @@ const Bg = () => {
 
       if (birdTop <= 0 || birdBottom >= gameAreaHeight) {
         setIsGameOver(true);
+        updateHighScore();
         return;
       }
 
@@ -98,6 +109,7 @@ const Bg = () => {
           (birdTop < obstacle.topHeight || birdBottom > gameAreaHeight - obstacle.bottomHeight)
         ) {
           setIsGameOver(true);
+          updateHighScore();
           break;
         }
 
@@ -119,6 +131,13 @@ const Bg = () => {
       checkCollision();
     }
   }, [birdPosition, obstacles, gameHasStarted, isGameOver]);
+
+  const updateHighScore = () => {
+    if (score > highScore) {
+      setHighScore(score);
+      Cookies.set('highScore', score, { expires: 365 });
+    }
+  };
 
   const restartGame = () => {
     setBirdPosition(250);
@@ -148,7 +167,7 @@ const Bg = () => {
                 )}
               </React.Fragment>
             ))}
-            {isGameOver && <GameOver score={score} restartGame={restartGame} gameRef={gameRef} />}
+            {isGameOver && <GameOver score={score} highScore={highScore} restartGame={restartGame} gameRef={gameRef} />}
             {gameHasStarted && !isGameOver && <div className="absolute top-4 left-4 text-white text-2xl">Score: {score}</div>}
             {!gameHasStarted && <div className="absolute w-full h-full flex justify-center items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl backdrop-filter backdrop-blur-sm duration-1000">Press Any Key to Start</div>}
           </div>
