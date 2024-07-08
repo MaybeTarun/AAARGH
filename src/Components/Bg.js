@@ -48,7 +48,7 @@ const Bg = () => {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === ' ' || event.key === 'Enter') {
-        event.preventDefault(); // Prevents default behavior of keys like space or enter
+        event.preventDefault();
         handleJump();
       }
     };

@@ -10,6 +10,4 @@ In other words, it is a Flappy Bird clone (but it has some twists)
 
 Sadly enough, I couldn't do it.
 
-I will be trying more to complete my original idea but till then consider the project as OpenSource and help me if you can. 🥲
-
-(For now the game works with key press, so you can play it too in the mean time)
+For now the game works with key press, so you can play it too in the mean time
