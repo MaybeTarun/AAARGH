@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import bg1 from '../assets/bg1.png';
 import Player from './Player.js';
 import Obstacle from './Obstacle.js';
@@ -11,7 +11,7 @@ const Bg = () => {
   const [obstacles, setObstacles] = useState([]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(Cookies.get('highScore') || 0);
+  const [difficulty, setDifficulty] = useState(null);
   const gravity = 6;
   const birdWidth = 50;
   const birdHeight = 50;
@@ -22,10 +22,47 @@ const Bg = () => {
   const gameAreaWidth = 380;
   const birdLeft = 15;
   const jumpHeight = 40;
-  const middleRangeStart = 150;
-  const middleRangeEnd = 450;
+
+  const middleRangeStart = difficulty === 'easy' ? 150 : 50;
+  const middleRangeEnd = difficulty === 'easy' ? 450 : 550;
 
   const gameRef = useRef(null);
+
+  const [easyHighScore, setEasyHighScore] = useState(Cookies.get('easyHighScore') || 0);
+  const [hardHighScore, setHardHighScore] = useState(Cookies.get('hardHighScore') || 0);
+
+  const restartGame = useCallback(() => {
+    setBirdPosition(250);
+    setGameHasStarted(false);
+    setObstacles([]);
+    setIsGameOver(false);
+    setScore(0);
+  }, []);
+
+  const handleJump = useCallback(() => {
+    if (gameHasStarted && !isGameOver) {
+      setBirdPosition(birdPosition => birdPosition - jumpHeight);
+    }
+    if (isGameOver) {
+      restartGame();
+    }
+  }, [gameHasStarted, isGameOver, restartGame]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === ' ') {
+        handleJump();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('touchstart', handleJump);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('touchstart', handleJump);
+    };
+  }, [handleJump]);
 
   useEffect(() => {
     let gameInterval;
@@ -57,35 +94,17 @@ const Bg = () => {
     }
 
     return () => clearInterval(gameInterval);
-  }, [gameHasStarted, isGameOver]);
+  }, [gameHasStarted, isGameOver, middleRangeStart, middleRangeEnd, gravity, obstacleWidth, gapSize, obstacleGap, gameAreaWidth]);
 
-  const handleJump = () => {
-    if (!gameHasStarted) {
-      setGameHasStarted(true);
+  const updateHighScore = useCallback(() => {
+    if (difficulty === 'easy' && score > easyHighScore) {
+      setEasyHighScore(score);
+      Cookies.set('easyHighScore', score, { expires: 365 });
+    } else if (difficulty === 'hard' && score > hardHighScore) {
+      setHardHighScore(score);
+      Cookies.set('hardHighScore', score, { expires: 365 });
     }
-    if (gameHasStarted && !isGameOver) {
-      setBirdPosition(birdPosition => birdPosition - jumpHeight);
-    }
-    if (isGameOver) {
-      restartGame();
-    }
-  };
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === ' ') {
-        handleJump();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('touchstart', handleJump);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('touchstart', handleJump);
-    };
-  }, [gameHasStarted, isGameOver]);
+  }, [score, easyHighScore, hardHighScore, difficulty]);
 
   useEffect(() => {
     const checkCollision = () => {
@@ -130,25 +149,15 @@ const Bg = () => {
     if (gameHasStarted && !isGameOver) {
       checkCollision();
     }
-  }, [birdPosition, obstacles, gameHasStarted, isGameOver]);
+  }, [birdPosition, obstacles, gameHasStarted, isGameOver, updateHighScore, birdLeft, birdWidth, birdHeight, gameAreaHeight, obstacleWidth]);
 
-  const updateHighScore = () => {
-    if (score > highScore) {
-      setHighScore(score);
-      Cookies.set('highScore', score, { expires: 365 });
-    }
-  };
-
-  const restartGame = () => {
-    setBirdPosition(250);
-    setGameHasStarted(false);
-    setObstacles([]);
-    setIsGameOver(false);
-    setScore(0);
+  const handleDifficultyChange = (newDifficulty) => {
+    setDifficulty(newDifficulty);
+    setGameHasStarted(true);
   };
 
   return (
-    <div ref={gameRef} className='h-screen w-screen flex justify-center items-center fixed' onClick={() => setGameHasStarted(true)}>
+    <div ref={gameRef} className='h-screen w-screen flex justify-center items-center fixed'>
       <div className='absolute w-screen h-screen bg-zinc-800'>
         <img src={bg1} alt='bg' className='relative w-screen h-screen bg-no-repeat object-cover opacity-30 select-none'></img>
       </div>
@@ -167,9 +176,28 @@ const Bg = () => {
                 )}
               </React.Fragment>
             ))}
-            {isGameOver && <GameOver score={score} highScore={highScore} restartGame={restartGame} gameRef={gameRef} />}
+            {isGameOver && (
+              <GameOver
+                score={score}
+                highScore={difficulty === 'easy' ? easyHighScore : hardHighScore}
+                easyHighScore={easyHighScore}
+                hardHighScore={hardHighScore}
+                restartGame={restartGame}
+                gameRef={gameRef}
+              />
+            )}
             {gameHasStarted && !isGameOver && <div className="absolute top-4 left-4 text-white text-2xl">Score: {score}</div>}
-            {!gameHasStarted && <div className="absolute w-full h-full flex justify-center items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl backdrop-filter backdrop-blur-sm duration-1000">Press Any Key to Start</div>}
+            {!gameHasStarted && (
+              <div className="absolute w-full h-full flex justify-center items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl backdrop-filter backdrop-blur-sm duration-1000">
+                <div className="text-center">
+                  Select Game Mode
+                  <div className="flex mt-4 justify-center text-lg">
+                    <button className="mr-2 px-4 py-2 border-2 border-white text-white rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out" onClick={() => handleDifficultyChange('easy')}>Easy</button>
+                    <button className="px-4 py-2 border-2 border-white text-white rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out" onClick={() => handleDifficultyChange('hard')}>Hard</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
