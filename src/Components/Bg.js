@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import bg1 from '../assets/bg1.png';
-import Player from './Player.js';
-import Obstacle from './Obstacle.js';
-import GameOver from './GameOver.js';
+import Player from './Player';
+import Obstacle from './Obstacle';
+import GameOver from './GameOver';
 import Cookies from 'js-cookie';
 
 const Bg = () => {
@@ -41,16 +41,14 @@ const Bg = () => {
 
   const handleJump = useCallback(() => {
     if (gameHasStarted && !isGameOver) {
-      setBirdPosition(birdPosition => birdPosition - jumpHeight);
+      setBirdPosition((birdPosition) => birdPosition - jumpHeight);
     }
-    if (isGameOver) {
-      restartGame();
-    }
-  }, [gameHasStarted, isGameOver, restartGame]);
+  }, [gameHasStarted, isGameOver, jumpHeight]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === ' ') {
+      if (event.key === ' ' || event.key === 'Enter') {
+        event.preventDefault(); // Prevents default behavior of keys like space or enter
         handleJump();
       }
     };
@@ -68,23 +66,27 @@ const Bg = () => {
     let gameInterval;
     if (gameHasStarted && !isGameOver) {
       gameInterval = setInterval(() => {
-        setBirdPosition(birdPosition => birdPosition + gravity);
-        setObstacles(obstacles => {
-          let newObstacles = obstacles.map(obstacle => ({
+        setBirdPosition((birdPosition) => birdPosition + gravity);
+        setObstacles((obstacles) => {
+          let newObstacles = obstacles.map((obstacle) => ({
             ...obstacle,
-            left: obstacle.left - 5
+            left: obstacle.left - 5,
           }));
 
-          newObstacles = newObstacles.filter(obstacle => obstacle.left > -obstacleWidth);
+          newObstacles = newObstacles.filter((obstacle) => obstacle.left > -obstacleWidth);
 
-          if (newObstacles.length === 0 || newObstacles[newObstacles.length - 1].left < gameAreaWidth - obstacleGap) {
-            const topHeight = Math.random() * (middleRangeEnd - middleRangeStart - gapSize) + middleRangeStart;
+          if (
+            newObstacles.length === 0 ||
+            newObstacles[newObstacles.length - 1].left < gameAreaWidth - obstacleGap
+          ) {
+            const topHeight =
+              Math.random() * (middleRangeEnd - middleRangeStart - gapSize) + middleRangeStart;
             const bottomHeight = gameAreaHeight - topHeight - gapSize;
             newObstacles.push({
               topHeight,
               bottomHeight,
               left: gameAreaWidth,
-              passed: false
+              passed: false,
             });
           }
 
@@ -94,7 +96,17 @@ const Bg = () => {
     }
 
     return () => clearInterval(gameInterval);
-  }, [gameHasStarted, isGameOver, middleRangeStart, middleRangeEnd, gravity, obstacleWidth, gapSize, obstacleGap, gameAreaWidth]);
+  }, [
+    gameHasStarted,
+    isGameOver,
+    middleRangeStart,
+    middleRangeEnd,
+    gravity,
+    obstacleWidth,
+    gapSize,
+    obstacleGap,
+    gameAreaWidth,
+  ]);
 
   const updateHighScore = useCallback(() => {
     if (difficulty === 'easy' && score > easyHighScore) {
@@ -133,9 +145,9 @@ const Bg = () => {
         }
 
         if (obstacleLeft + obstacleWidth === birdLeft && !obstacle.passed) {
-          setScore(score => score + 1);
-          setObstacles(prevObstacles => {
-            return prevObstacles.map(prevObstacle => {
+          setScore((score) => score + 1);
+          setObstacles((prevObstacles) => {
+            return prevObstacles.map((prevObstacle) => {
               if (prevObstacle === obstacle) {
                 return { ...prevObstacle, passed: true };
               }
@@ -149,7 +161,18 @@ const Bg = () => {
     if (gameHasStarted && !isGameOver) {
       checkCollision();
     }
-  }, [birdPosition, obstacles, gameHasStarted, isGameOver, updateHighScore, birdLeft, birdWidth, birdHeight, gameAreaHeight, obstacleWidth]);
+  }, [
+    birdPosition,
+    obstacles,
+    gameHasStarted,
+    isGameOver,
+    updateHighScore,
+    birdLeft,
+    birdWidth,
+    birdHeight,
+    gameAreaHeight,
+    obstacleWidth,
+  ]);
 
   const handleDifficultyChange = (newDifficulty) => {
     setDifficulty(newDifficulty);
@@ -159,19 +182,31 @@ const Bg = () => {
   return (
     <div ref={gameRef} className='h-screen w-screen flex justify-center items-center fixed'>
       <div className='absolute w-screen h-screen bg-zinc-800'>
-        <img src={bg1} alt='bg' className='relative w-screen h-screen bg-no-repeat object-cover opacity-30 select-none'></img>
+        <img
+          src={bg1}
+          alt='bg'
+          className='relative w-screen h-screen bg-no-repeat object-cover opacity-30 select-none'
+        ></img>
       </div>
       <div className='w-full h-full py-20 flex justify-center items-center'>
         <div className='relative' style={{ width: `${gameAreaWidth}px`, height: `${gameAreaHeight}px` }}>
           <div className='absolute w-full h-full bg-zinc-800' style={{ overflow: 'hidden' }}>
-            <img src={bg1} alt='bg' className='absolute w-full h-full object-cover border-4 border-white select-none opacity-70'></img>
+            <img
+              src={bg1}
+              alt='bg'
+              className='absolute w-full h-full object-cover border-4 border-white select-none opacity-70'
+            ></img>
             <Player position={birdPosition} />
             {obstacles.map((obstacle, index) => (
               <React.Fragment key={index}>
                 {obstacle.left > -obstacleWidth && (
                   <>
                     <Obstacle top={0} left={obstacle.left} height={obstacle.topHeight} />
-                    <Obstacle top={gameAreaHeight - obstacle.bottomHeight} left={obstacle.left} height={obstacle.bottomHeight} />
+                    <Obstacle
+                      top={gameAreaHeight - obstacle.bottomHeight}
+                      left={obstacle.left}
+                      height={obstacle.bottomHeight}
+                    />
                   </>
                 )}
               </React.Fragment>
@@ -186,14 +221,26 @@ const Bg = () => {
                 gameRef={gameRef}
               />
             )}
-            {gameHasStarted && !isGameOver && <div className="absolute top-4 left-4 text-white text-2xl">Score: {score}</div>}
+            {gameHasStarted && !isGameOver && (
+              <div className='absolute top-4 left-4 text-white text-2xl'>Score: {score}</div>
+            )}
             {!gameHasStarted && (
-              <div className="absolute w-full h-full flex justify-center items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl backdrop-filter backdrop-blur-sm duration-1000">
-                <div className="text-center">
+              <div className='absolute w-full h-full flex justify-center items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl backdrop-filter backdrop-blur-sm duration-1000'>
+                <div className='text-center'>
                   Select Game Mode
-                  <div className="flex mt-4 justify-center text-lg">
-                    <button className="mr-2 px-4 py-2 border-2 border-white text-white rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out" onClick={() => handleDifficultyChange('easy')}>Easy</button>
-                    <button className="px-4 py-2 border-2 border-white text-white rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out" onClick={() => handleDifficultyChange('hard')}>Hard</button>
+                  <div className='flex mt-4 justify-center text-lg'>
+                    <button
+                      className='mr-2 px-4 py-2 border-2 border-white text-white rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out'
+                      onClick={() => handleDifficultyChange('easy')}
+                    >
+                      Easy
+                    </button>
+                    <button
+                      className='px-4 py-2 border-2 border-white text-white rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out'
+                      onClick={() => handleDifficultyChange('hard')}
+                    >
+                      Hard
+                    </button>
                   </div>
                 </div>
               </div>
@@ -202,7 +249,7 @@ const Bg = () => {
         </div>
       </div>
     </div>
-  );  
+  );
 };
 
 export default Bg;

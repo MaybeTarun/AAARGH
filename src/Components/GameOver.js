@@ -8,7 +8,13 @@ const GameOver = ({ score, easyHighScore, hardHighScore, restartGame }) => {
         <p><br/>Score: <span style={{ border: '2px solid white', padding: '0 5px' }}>{score}</span></p>
         <p className='underline'><br/>High Scores</p>
         <p>Easy: {easyHighScore} --- Hard: {hardHighScore}</p>
-        <p className='text-2xl'><br/>Press Any Key to Restart</p>
+        <p><br/></p>
+        <button
+          className="mt-4 px-4 py-2 border-2 border-white text-white text-lg rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out"
+          onClick={restartGame}
+        >
+          Restart Game
+        </button>
       </div>
     </div>
   );
