@@ -5,7 +5,7 @@ const Player = ({ position }) => {
   const birdLeft = 15;
 
   return (
-    <div className='relative' style={{ top: `${position}px`, left: `${birdLeft}px`, width: '50px', height: '50px' }}>
+    <div className='relative' style={{ top: `${position}px`, left: `${birdLeft}px`, width: '40px', height: '40px' }}>
       <img src={player1} alt='player' className='bg-no-repeat w-full h-full select-none'></img>
     </div>
   );

@@ -12,11 +12,11 @@ const Bg = () => {
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [difficulty, setDifficulty] = useState(null);
-  const gravity = 6;
+  const gravity = 5;
   const birdWidth = 50;
   const birdHeight = 50;
   const obstacleWidth = 60;
-  const gapSize = 150;
+  const gapSize = 130;
   const obstacleGap = 350;
   const gameAreaHeight = 600;
   const gameAreaWidth = 380;
@@ -64,6 +64,8 @@ const Bg = () => {
 
   useEffect(() => {
     let gameInterval;
+    const intervalDuration = difficulty === 'easy' ? 50 : 40;
+
     if (gameHasStarted && !isGameOver) {
       gameInterval = setInterval(() => {
         setBirdPosition((birdPosition) => birdPosition + gravity);
@@ -92,13 +94,14 @@ const Bg = () => {
 
           return newObstacles;
         });
-      }, 40);
+      }, intervalDuration);
     }
 
     return () => clearInterval(gameInterval);
   }, [
     gameHasStarted,
     isGameOver,
+    difficulty,
     middleRangeStart,
     middleRangeEnd,
     gravity,
