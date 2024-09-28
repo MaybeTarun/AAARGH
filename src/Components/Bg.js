@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import bg1 from '../assets/bg1.png';
 import Player from './Player';
 import Obstacle from './Obstacle';
@@ -12,19 +12,24 @@ const Bg = () => {
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [difficulty, setDifficulty] = useState(null);
-  const gravity = 5;
-  const birdWidth = 50;
-  const birdHeight = 50;
-  const obstacleWidth = 60;
-  const gapSize = 130;
-  const obstacleGap = 350;
-  const gameAreaHeight = 600;
-  const gameAreaWidth = 380;
-  const birdLeft = 15;
-  const jumpHeight = 40;
 
-  const middleRangeStart = difficulty === 'easy' ? 150 : 50;
-  const middleRangeEnd = difficulty === 'easy' ? 450 : 550;
+  const gameConstants = useMemo(() => ({
+    gravity: 5,
+    birdWidth: 50,
+    birdHeight: 50,
+    obstacleWidth: 60,
+    gapSize: 130,
+    obstacleGap: 350,
+    gameAreaHeight: 600,
+    gameAreaWidth: 380,
+    birdLeft: 15,
+    jumpHeight: 40,
+  }), []);
+
+  const { gravity, birdWidth, birdHeight, obstacleWidth, gapSize, obstacleGap, gameAreaHeight, gameAreaWidth, birdLeft, jumpHeight } = gameConstants;
+
+  const middleRangeStart = useMemo(() => difficulty === 'easy' ? 150 : 50, [difficulty]);
+  const middleRangeEnd = useMemo(() => difficulty === 'easy' ? 450 : 550, [difficulty]);
 
   const gameRef = useRef(null);
 
@@ -41,7 +46,7 @@ const Bg = () => {
 
   const handleJump = useCallback(() => {
     if (gameHasStarted && !isGameOver) {
-      setBirdPosition((birdPosition) => birdPosition - jumpHeight);
+      setBirdPosition(prevPosition => prevPosition - jumpHeight);
     }
   }, [gameHasStarted, isGameOver, jumpHeight]);
 
@@ -63,53 +68,32 @@ const Bg = () => {
   }, [handleJump]);
 
   useEffect(() => {
-    let gameInterval;
+    if (!gameHasStarted || isGameOver) return;
+
     const intervalDuration = difficulty === 'easy' ? 50 : 40;
+    const gameInterval = setInterval(() => {
+      setBirdPosition(prevPosition => prevPosition + gravity);
+      setObstacles(prevObstacles => {
+        let newObstacles = prevObstacles
+          .map(obstacle => ({ ...obstacle, left: obstacle.left - 5 }))
+          .filter(obstacle => obstacle.left > -obstacleWidth);
 
-    if (gameHasStarted && !isGameOver) {
-      gameInterval = setInterval(() => {
-        setBirdPosition((birdPosition) => birdPosition + gravity);
-        setObstacles((obstacles) => {
-          let newObstacles = obstacles.map((obstacle) => ({
-            ...obstacle,
-            left: obstacle.left - 5,
-          }));
+        if (newObstacles.length === 0 || newObstacles[newObstacles.length - 1].left < gameAreaWidth - obstacleGap) {
+          const topHeight = Math.random() * (middleRangeEnd - middleRangeStart - gapSize) + middleRangeStart;
+          newObstacles.push({
+            topHeight,
+            bottomHeight: gameAreaHeight - topHeight - gapSize,
+            left: gameAreaWidth,
+            passed: false,
+          });
+        }
 
-          newObstacles = newObstacles.filter((obstacle) => obstacle.left > -obstacleWidth);
-
-          if (
-            newObstacles.length === 0 ||
-            newObstacles[newObstacles.length - 1].left < gameAreaWidth - obstacleGap
-          ) {
-            const topHeight =
-              Math.random() * (middleRangeEnd - middleRangeStart - gapSize) + middleRangeStart;
-            const bottomHeight = gameAreaHeight - topHeight - gapSize;
-            newObstacles.push({
-              topHeight,
-              bottomHeight,
-              left: gameAreaWidth,
-              passed: false,
-            });
-          }
-
-          return newObstacles;
-        });
-      }, intervalDuration);
-    }
+        return newObstacles;
+      });
+    }, intervalDuration);
 
     return () => clearInterval(gameInterval);
-  }, [
-    gameHasStarted,
-    isGameOver,
-    difficulty,
-    middleRangeStart,
-    middleRangeEnd,
-    gravity,
-    obstacleWidth,
-    gapSize,
-    obstacleGap,
-    gameAreaWidth,
-  ]);
+  }, [gameHasStarted, isGameOver, difficulty, middleRangeStart, middleRangeEnd, gravity, obstacleWidth, gapSize, obstacleGap, gameAreaWidth, gameAreaHeight]);
 
   const updateHighScore = useCallback(() => {
     if (difficulty === 'easy' && score > easyHighScore) {

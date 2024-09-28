@@ -3,13 +3,11 @@ import './App.css'
 import Bg from './Components/Bg.js'
 import { Analytics } from "@vercel/analytics/react"
 
-const App = () => {
-  return (
-    <div>
-      <Analytics />
-      <Bg/>
-    </div>
-  )
-}
+const App = () => (
+  <>
+    <Analytics />
+    <Bg />
+  </>
+);
 
-export default App
+export default App;
