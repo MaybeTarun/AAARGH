@@ -4,6 +4,7 @@ import Player from './Player';
 import Obstacle from './Obstacle';
 import GameOver from './GameOver';
 import Cookies from 'js-cookie';
+import { FaMicrophone } from 'react-icons/fa';
 
 const Bg = () => {
   const [birdPosition, setBirdPosition] = useState(250);
@@ -11,7 +12,7 @@ const Bg = () => {
   const [obstacles, setObstacles] = useState([]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
-  const [difficulty, setDifficulty] = useState(null);
+  const [isScreaming, setIsScreaming] = useState(false);
 
   const gameConstants = useMemo(() => ({
     gravity: 5,
@@ -28,13 +29,9 @@ const Bg = () => {
 
   const { gravity, birdWidth, birdHeight, obstacleWidth, gapSize, obstacleGap, gameAreaHeight, gameAreaWidth, birdLeft, jumpHeight } = gameConstants;
 
-  const middleRangeStart = useMemo(() => difficulty === 'easy' ? 150 : 50, [difficulty]);
-  const middleRangeEnd = useMemo(() => difficulty === 'easy' ? 450 : 550, [difficulty]);
-
   const gameRef = useRef(null);
 
-  const [easyHighScore, setEasyHighScore] = useState(Cookies.get('easyHighScore') || 0);
-  const [hardHighScore, setHardHighScore] = useState(Cookies.get('hardHighScore') || 0);
+  const [highScore, setHighScore] = useState(Cookies.get('highScore') || 0);
 
   const restartGame = useCallback(() => {
     setBirdPosition(250);
@@ -51,26 +48,73 @@ const Bg = () => {
   }, [gameHasStarted, isGameOver, jumpHeight]);
 
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === ' ' || event.key === 'Enter') {
-        event.preventDefault();
-        handleJump();
+    let audioContext;
+    let analyser;
+    let microphone;
+    let javascriptNode;
+
+    const setupAudio = async () => {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        microphone = audioContext.createMediaStreamSource(stream);
+        javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+        analyser.smoothingTimeConstant = 0.5;
+        analyser.fftSize = 1024;
+
+        microphone.connect(analyser);
+        analyser.connect(javascriptNode);
+        javascriptNode.connect(audioContext.destination);
+
+        javascriptNode.onaudioprocess = () => {
+          const array = new Uint8Array(analyser.frequencyBinCount);
+          analyser.getByteFrequencyData(array);
+          const values = array.reduce((a, b) => a + b) / array.length;
+          
+          const currentlyScreaming = values > 50;
+          
+          if (currentlyScreaming) {
+            handleJump();
+          }
+
+          setIsScreaming(currentlyScreaming);
+        };
+      } catch (error) {
+        console.error('Error accessing microphone:', error);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('touchstart', handleJump);
+    setupAudio();
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('touchstart', handleJump);
+      if (javascriptNode) javascriptNode.onaudioprocess = null;
+      if (microphone) microphone.disconnect();
+      if (analyser) analyser.disconnect();
+      if (javascriptNode) javascriptNode.disconnect();
+      if (audioContext) audioContext.close();
     };
   }, [handleJump]);
 
   useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === ' ' || event.key === 'Enter') {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!gameHasStarted || isGameOver) return;
 
-    const intervalDuration = difficulty === 'easy' ? 50 : 40;
+    const intervalDuration = 50;
     const gameInterval = setInterval(() => {
       setBirdPosition(prevPosition => Math.min(gameAreaHeight - birdHeight, prevPosition + gravity));
       setObstacles(prevObstacles => {
@@ -79,7 +123,7 @@ const Bg = () => {
           .filter(obstacle => obstacle.left > -obstacleWidth);
 
         if (newObstacles.length === 0 || newObstacles[newObstacles.length - 1].left < gameAreaWidth - obstacleGap) {
-          const topHeight = Math.random() * (middleRangeEnd - middleRangeStart - gapSize) + middleRangeStart;
+          const topHeight = Math.random() * (450 - 150 - gapSize) + 150;
           newObstacles.push({
             topHeight,
             bottomHeight: gameAreaHeight - topHeight - gapSize,
@@ -93,17 +137,14 @@ const Bg = () => {
     }, intervalDuration);
 
     return () => clearInterval(gameInterval);
-  }, [gameHasStarted, isGameOver, difficulty, middleRangeStart, middleRangeEnd, gravity, obstacleWidth, gapSize, obstacleGap, gameAreaWidth, gameAreaHeight, birdHeight]);
+  }, [gameHasStarted, isGameOver, gravity, obstacleWidth, gapSize, obstacleGap, gameAreaWidth, gameAreaHeight, birdHeight]);
 
   const updateHighScore = useCallback(() => {
-    if (difficulty === 'easy' && score > easyHighScore) {
-      setEasyHighScore(score);
-      Cookies.set('easyHighScore', score, { expires: 365 });
-    } else if (difficulty === 'hard' && score > hardHighScore) {
-      setHardHighScore(score);
-      Cookies.set('hardHighScore', score, { expires: 365 });
+    if (score > highScore) {
+      setHighScore(score);
+      Cookies.set('highScore', score, { expires: 365 });
     }
-  }, [score, easyHighScore, hardHighScore, difficulty]);
+  }, [score, highScore]);
 
   useEffect(() => {
     const checkCollision = () => {
@@ -161,8 +202,7 @@ const Bg = () => {
     obstacleWidth,
   ]);
 
-  const handleDifficultyChange = (newDifficulty) => {
-    setDifficulty(newDifficulty);
+  const startGame = () => {
     setGameHasStarted(true);
   };
 
@@ -201,9 +241,7 @@ const Bg = () => {
             {isGameOver && (
               <GameOver
                 score={score}
-                highScore={difficulty === 'easy' ? easyHighScore : hardHighScore}
-                easyHighScore={easyHighScore}
-                hardHighScore={hardHighScore}
+                highScore={highScore}
                 restartGame={restartGame}
                 gameRef={gameRef}
               />
@@ -214,25 +252,23 @@ const Bg = () => {
             {!gameHasStarted && (
               <div className='absolute w-full h-full flex justify-center items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white text-2xl backdrop-filter backdrop-blur-sm duration-1000'>
                 <div className='text-center'>
-                  Select Game Mode
-                  <div className='flex mt-4 justify-center text-lg'>
-                    <button
-                      className='mr-2 px-4 py-2 border-2 border-white text-white rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out'
-                      onClick={() => handleDifficultyChange('easy')}
-                    >
-                      Easy
-                    </button>
+                  <p className='mb-6 text-2xl'>Scream To Win!</p>
+                  <div className='flex justify-center text-lg'>
                     <button
                       className='px-4 py-2 border-2 border-white text-white rounded-lg hover:bg-white hover:bg-opacity-20 transition duration-300 ease-in-out'
-                      onClick={() => handleDifficultyChange('hard')}
+                      onClick={startGame}
                     >
-                      Hard
+                      Play
                     </button>
                   </div>
-                  <p className='mt-4 text-sm'>Scream To Win!</p>
                 </div>
               </div>
             )}
+            <div className='absolute top-4 right-4 flex items-center'>
+              <FaMicrophone
+                className={`text-2xl ${isScreaming ? 'text-white' : 'text-gray-300'} transition-colors duration-200`}
+              />
+            </div>
           </div>
         </div>
       </div>
