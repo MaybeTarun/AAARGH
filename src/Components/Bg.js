@@ -73,7 +73,7 @@ const Bg = () => {
           analyser.getByteFrequencyData(array);
           const values = array.reduce((a, b) => a + b) / array.length;
           
-          const currentlyScreaming = values > 50;
+          const currentlyScreaming = values > 80;
           
           if (currentlyScreaming) {
             handleJump();
