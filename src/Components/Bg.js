@@ -46,7 +46,7 @@ const Bg = () => {
 
   const handleJump = useCallback(() => {
     if (gameHasStarted && !isGameOver) {
-      setBirdPosition(prevPosition => prevPosition - jumpHeight);
+      setBirdPosition(prevPosition => Math.max(0, prevPosition - jumpHeight));
     }
   }, [gameHasStarted, isGameOver, jumpHeight]);
 
@@ -72,7 +72,7 @@ const Bg = () => {
 
     const intervalDuration = difficulty === 'easy' ? 50 : 40;
     const gameInterval = setInterval(() => {
-      setBirdPosition(prevPosition => prevPosition + gravity);
+      setBirdPosition(prevPosition => Math.min(gameAreaHeight - birdHeight, prevPosition + gravity));
       setObstacles(prevObstacles => {
         let newObstacles = prevObstacles
           .map(obstacle => ({ ...obstacle, left: obstacle.left - 5 }))
@@ -93,7 +93,7 @@ const Bg = () => {
     }, intervalDuration);
 
     return () => clearInterval(gameInterval);
-  }, [gameHasStarted, isGameOver, difficulty, middleRangeStart, middleRangeEnd, gravity, obstacleWidth, gapSize, obstacleGap, gameAreaWidth, gameAreaHeight]);
+  }, [gameHasStarted, isGameOver, difficulty, middleRangeStart, middleRangeEnd, gravity, obstacleWidth, gapSize, obstacleGap, gameAreaWidth, gameAreaHeight, birdHeight]);
 
   const updateHighScore = useCallback(() => {
     if (difficulty === 'easy' && score > easyHighScore) {
@@ -229,6 +229,7 @@ const Bg = () => {
                       Hard
                     </button>
                   </div>
+                  <p className='mt-4 text-sm'>Scream To Win!</p>
                 </div>
               </div>
             )}
